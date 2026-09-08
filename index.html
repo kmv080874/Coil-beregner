@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Coil-beregner</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="favicon-32.png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#C97A4A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coil-beregner">
+<style>
+  :root{
+    --bg: #171C1F;
+    --bg-2: #1D2327;
+    --panel: #232A2E;
+    --panel-2: #2B3338;
+    --border: #384044;
+    --text: #E9EDEE;
+    --text-dim: #8B979C;
+    --copper: #C97A4A;
+    --copper-bright: #E5985F;
+    --copper-soft: rgba(201,122,74,0.14);
+    --used-bg: #322A1E;
+    --used-border: #C99A3D;
+    --unused-text: #4E585C;
+    --good: #8FBF7A;
+    --bad: #D97757;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background: radial-gradient(circle at 50% 0%, var(--bg-2) 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height:100vh;
+    padding: 20px 14px 48px;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom: 22px;
+    animation: fadeDown 0.5s ease both;
+  }
+  .icon{
+    width:42px; height:42px;
+    flex-shrink:0;
+    border-radius: 10px;
+    background: linear-gradient(145deg, var(--copper), #A85E33);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 4px 14px rgba(201,122,74,0.35);
+  }
+  .icon svg{ width:24px; height:24px; }
+  h1{
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    margin: 0 0 2px;
+  }
+  .sub{
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    margin: 0;
+  }
+
+  section{
+    animation: fadeUp 0.4s ease both;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .cell{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 8px 6px 9px;
+    transition: background 0.2s, border-color 0.2s, opacity 0.25s, transform 0.2s;
+  }
+  .cell .num{
+    font-size: 0.66rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 4px;
+    display:block;
+  }
+  .cell input{
+    width:100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    padding: 9px 4px;
+    text-align:center;
+    min-height: 42px;
+  }
+  .cell input:focus{
+    outline: none;
+    border-color: var(--copper);
+    box-shadow: 0 0 0 3px var(--copper-soft);
+  }
+  .cell.used{
+    background: var(--used-bg);
+    border-color: var(--used-border);
+    animation: popIn 0.35s ease;
+  }
+  .cell.used input{
+    border-color: var(--used-border);
+    color: #F2D9A8;
+    font-weight: 600;
+  }
+  .cell.unused{
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  .cell.unused input{
+    color: var(--unused-text);
+  }
+
+  .target-block{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .target-block label{
+    display:block;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  #target{
+    width:100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 12px 10px;
+    min-height: 48px;
+  }
+  #target:focus{ outline:none; border-color: var(--copper); box-shadow: 0 0 0 3px var(--copper-soft); }
+
+  button{
+    border: none;
+    border-radius: 9px;
+    font-size: 1rem;
+    font-weight: 700;
+    min-height: 50px;
+    padding: 0 18px;
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  button:active{ transform: scale(0.97); }
+
+  #calcBtn{
+    width:100%;
+    background: linear-gradient(135deg, var(--copper-bright), var(--copper));
+    color: #171C1F;
+    margin-bottom: 10px;
+    box-shadow: 0 6px 16px rgba(201,122,74,0.25);
+  }
+
+  #resetBtn{
+    width:100%;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    min-height: 42px;
+    font-size: 0.85rem;
+  }
+
+  .result{
+    display:none;
+    background: var(--panel);
+    border: 1px solid var(--used-border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 18px;
+  }
+  .result.show{
+    display:block;
+    animation: slideIn 0.4s ease both;
+  }
+  .result-row{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+  }
+  .result-row .label{ color: var(--text-dim); font-size: 0.82rem; }
+  .result-row .value{ font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.05rem; }
+  .result-row.main .value{ color: var(--copper-bright); font-size: 1.35rem; }
+  .diff-pos .value{ color: var(--good); }
+  .diff-neg .value{ color: var(--bad); }
+
+  .parti-list{
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .parti-list-title{
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .parti-row{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .parti-row .coil-tag{
+    flex-shrink:0;
+    width: 72px;
+    font-size: 0.78rem;
+    color: var(--copper-bright);
+    font-weight: 600;
+  }
+  .parti-row .coil-kg{
+    flex-shrink:0;
+    width: 68px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .parti-row input{
+    flex:1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-size: 0.9rem;
+    padding: 8px 9px;
+    min-height: 38px;
+  }
+  .parti-row input:focus{
+    outline:none;
+    border-color: var(--copper);
+    box-shadow: 0 0 0 3px var(--copper-soft);
+  }
+
+  #pdfBtn{
+    width:100%;
+    margin-top: 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--copper);
+    color: var(--copper-bright);
+  }
+
+  .msg{
+    display:none;
+    background: #3A2A2A;
+    border: 1px solid #8C4B4B;
+    color: #E8B4B4;
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+  }
+  .msg.show{ display:block; animation: shake 0.3s ease; }
+
+  @keyframes fadeDown{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes slideIn{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes popIn{ 0%{transform:scale(0.94);} 60%{transform:scale(1.03);} 100%{transform:scale(1);} }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-4px);} 75%{transform:translateX(4px);} }
+
+  /* ---------- Print / PDF-visning ---------- */
+  #printArea{ display:none; }
+  @media print{
+    @page{ size: A4; margin: 18mm; }
+    body *{ visibility: hidden; }
+    #printArea, #printArea *{ visibility: visible; }
+    #printArea{
+      display:block;
+      position: absolute;
+      top:0; left:0;
+      width:100%;
+      background:#fff;
+      color:#1B1B1B;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .print-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom: 3px solid #C97A4A;
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+    .print-header h2{
+      margin:0; font-size: 1.4rem; color:#1B1B1B;
+    }
+    .print-header .date{
+      font-size: 0.85rem; color:#666;
+    }
+    .print-summary{
+      display:flex;
+      gap: 28px;
+      margin-bottom: 20px;
+    }
+    .print-summary div{ font-size: 0.85rem; color:#444; }
+    .print-summary strong{
+      display:block; font-size: 1.15rem; color:#1B1B1B; margin-top:2px;
+    }
+    table{
+      width:100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td{
+      text-align:left;
+      padding: 9px 10px;
+      border-bottom: 1px solid #DDD;
+    }
+    th{
+      background:#F1E5DA;
+      color:#7A4626;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    tfoot td{
+      font-weight:700;
+      border-top: 2px solid #C97A4A;
+      border-bottom:none;
+    }
+    .print-footer{
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: #999;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="icon">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" stroke="#171C1F" stroke-width="1.8"/>
+      <circle cx="12" cy="12" r="5" stroke="#171C1F" stroke-width="1.8"/>
+      <circle cx="12" cy="12" r="1.4" fill="#171C1F"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Coil-beregner</h1>
+    <p class="sub">Find den bedste kombination af coils til dit kg-mål</p>
+  </div>
+</header>
+
+<section>
+  <div class="grid" id="grid"></div>
+
+  <div class="target-block">
+    <label for="target">Kg du skal bruge</label>
+    <input type="text" inputmode="decimal" id="target" placeholder="f.eks. 1250">
+  </div>
+
+  <button id="calcBtn">Beregn</button>
+  <button id="resetBtn">Nulstil alt</button>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="result" id="result">
+    <div class="result-row main">
+      <span class="label">Valgte coils giver i alt</span>
+      <span class="value" id="sumVal">0 kg</span>
+    </div>
+    <div class="result-row" id="diffRow">
+      <span class="label">Forskel til mål</span>
+      <span class="value" id="diffVal">0 kg</span>
+    </div>
+    <div class="result-row">
+      <span class="label">Antal coils brugt</span>
+      <span class="value" id="countVal">0</span>
+    </div>
+
+    <div class="parti-list">
+      <div class="parti-list-title">Tilføj parti nr. til de valgte coils</div>
+      <div id="partiRows"></div>
+    </div>
+
+    <button id="pdfBtn">Gem som A4 PDF</button>
+  </div>
+</section>
+
+<!-- Skjult printvisning, bruges kun når "Gem som A4 PDF" trykkes -->
+<div id="printArea">
+  <div class="print-header">
+    <h2>Coil-oversigt</h2>
+    <div class="date" id="printDate"></div>
+  </div>
+  <div class="print-summary">
+    <div>Mål<strong id="printTarget">–</strong></div>
+    <div>Total valgt<strong id="printSum">–</strong></div>
+    <div>Forskel<strong id="printDiff">–</strong></div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Coil nr.</th><th>Parti nr.</th><th>Kg</th></tr>
+    </thead>
+    <tbody id="printTableBody"></tbody>
+    <tfoot>
+      <tr><td colspan="2">Total</td><td id="printTotalCell"></td></tr>
+    </tfoot>
+  </table>
+  <div class="print-footer">Genereret med Coil-beregner</div>
+</div>
+
+<script>
+  const grid = document.getElementById('grid');
+  const cells = [];
+  for(let i=1;i<=16;i++){
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.innerHTML = `<span class="num">Coil ${i}</span><input type="text" inputmode="decimal" class="coil-input" placeholder="kg">`;
+    grid.appendChild(cell);
+    cells.push(cell);
+  }
+
+  const targetInput = document.getElementById('target');
+  const msg = document.getElementById('msg');
+  const result = document.getElementById('result');
+  const partiRowsEl = document.getElementById('partiRows');
+
+  let lastSelected = []; // {idx, kg}
+  let lastSum = 0, lastTarget = 0, lastDiff = 0;
+
+  function parseNum(str){
+    if(!str) return NaN;
+    return parseFloat(str.replace(',', '.').trim());
+  }
+  function fmt(n){
+    return (Math.round(n*100)/100).toString().replace('.', ',');
+  }
+
+  function showMsg(text){
+    msg.textContent = text;
+    msg.classList.remove('show');
+    void msg.offsetWidth;
+    msg.classList.add('show');
+    result.classList.remove('show');
+  }
+  function hideMsg(){ msg.classList.remove('show'); }
+  function clearHighlights(){ cells.forEach(c => c.classList.remove('used','unused')); }
+
+  document.getElementById('calcBtn').addEventListener('click', () => {
+    hideMsg();
+    clearHighlights();
+
+    const target = parseNum(targetInput.value);
+    if(isNaN(target) || target <= 0){
+      showMsg('Indtast hvor mange kg du skal bruge.');
+      return;
+    }
+
+    const items = [];
+    cells.forEach((cell, idx) => {
+      const inp = cell.querySelector('input');
+      const v = parseNum(inp.value);
+      if(!isNaN(v) && v > 0) items.push({idx, v});
+    });
+
+    if(items.length === 0){
+      showMsg('Indtast vægten på mindst én coil.');
+      return;
+    }
+
+    const n = items.length;
+    let bestMask = 0, bestSum = 0, bestDiff = Infinity;
+    const totalCombos = 1 << n;
+
+    for(let mask = 1; mask < totalCombos; mask++){
+      let sum = 0;
+      for(let i = 0; i < n; i++){ if(mask & (1 << i)) sum += items[i].v; }
+      const diff = Math.abs(sum - target);
+      if(diff < bestDiff - 1e-9){
+        bestDiff = diff; bestSum = sum; bestMask = mask;
+      }
+    }
+
+    const usedIdx = new Set();
+    lastSelected = [];
+    for(let i = 0; i < n; i++){
+      if(bestMask & (1 << i)){
+        usedIdx.add(items[i].idx);
+        lastSelected.push({idx: items[i].idx, kg: items[i].v});
+      }
+    }
+    lastSelected.sort((a,b) => a.idx - b.idx);
+
+    cells.forEach((cell, idx) => {
+      const inp = cell.querySelector('input');
+      if(usedIdx.has(idx)) cell.classList.add('used');
+      else if(inp.value.trim() !== '') cell.classList.add('unused');
+    });
+
+    const diff = bestSum - target;
+    lastSum = bestSum; lastTarget = target; lastDiff = diff;
+
+    document.getElementById('sumVal').textContent = fmt(bestSum) + ' kg';
+    const diffRow = document.getElementById('diffRow');
+    diffRow.classList.remove('diff-pos','diff-neg');
+    diffRow.classList.add(diff >= 0 ? 'diff-pos' : 'diff-neg');
+    document.getElementById('diffVal').textContent = (diff >= 0 ? '+' : '') + fmt(diff) + ' kg';
+    document.getElementById('countVal').textContent = usedIdx.size;
+
+    partiRowsEl.innerHTML = '';
+    lastSelected.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'parti-row';
+      row.innerHTML = `
+        <span class="coil-tag">Coil ${item.idx + 1}</span>
+        <span class="coil-kg">${fmt(item.kg)} kg</span>
+        <input type="text" class="parti-input" data-idx="${item.idx}" placeholder="Parti nr.">
+      `;
+      partiRowsEl.appendChild(row);
+    });
+
+    result.classList.remove('show');
+    void result.offsetWidth;
+    result.classList.add('show');
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    cells.forEach(cell => {
+      cell.querySelector('input').value = '';
+      cell.classList.remove('used','unused');
+    });
+    targetInput.value = '';
+    hideMsg();
+    result.classList.remove('show');
+    lastSelected = [];
+  });
+
+  targetInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') document.getElementById('calcBtn').click();
+  });
+
+  document.getElementById('pdfBtn').addEventListener('click', () => {
+    if(lastSelected.length === 0) return;
+
+    const partiInputs = partiRowsEl.querySelectorAll('.parti-input');
+    const partiByIdx = {};
+    partiInputs.forEach(inp => { partiByIdx[inp.dataset.idx] = inp.value.trim(); });
+
+    const today = new Date();
+    document.getElementById('printDate').textContent = today.toLocaleDateString('da-DK', {year:'numeric', month:'long', day:'numeric'});
+    document.getElementById('printTarget').textContent = fmt(lastTarget) + ' kg';
+    document.getElementById('printSum').textContent = fmt(lastSum) + ' kg';
+    document.getElementById('printDiff').textContent = (lastDiff >= 0 ? '+' : '') + fmt(lastDiff) + ' kg';
+
+    const tbody = document.getElementById('printTableBody');
+    tbody.innerHTML = '';
+    lastSelected.forEach(item => {
+      const tr = document.createElement('tr');
+      const parti = partiByIdx[item.idx] || '–';
+      tr.innerHTML = `<td>Coil ${item.idx + 1}</td><td>${parti}</td><td>${fmt(item.kg)} kg</td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('printTotalCell').textContent = fmt(lastSum) + ' kg';
+
+    window.print();
+  });
+</script>
+
+</body>
+</html>
