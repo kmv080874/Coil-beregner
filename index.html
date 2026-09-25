@@ -1545,6 +1545,32 @@
   let ocrCancelled = false;
   let ocrSlowTimer = null;
 
+  function downscaleImage(file, maxDim){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(blob => {
+          if(blob) resolve(blob); else reject(new Error('Kunne ikke formindske billedet'));
+        }, 'image/jpeg', 0.9);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Kunne ikke indlæse billedet')); };
+      img.src = url;
+    });
+  }
+
   scanBtn.addEventListener('click', () => scanInput.click());
 
   scanInput.addEventListener('change', async (e) => {
@@ -1553,7 +1579,7 @@
 
     ocrCancelled = false;
     ocrOverlay.classList.add('show');
-    ocrStatusEl.textContent = 'Læser billede…';
+    ocrStatusEl.textContent = 'Behandler billede…';
     ocrSlowMsgEl.classList.remove('show');
     clearTimeout(ocrSlowTimer);
     ocrSlowTimer = setTimeout(() => {
@@ -1561,9 +1587,17 @@
     }, 15000);
 
     try{
+      let ocrInput = file;
+      try{
+        ocrInput = await downscaleImage(file, 1800);
+      }catch(resizeErr){
+        ocrInput = file;
+      }
+      if(ocrCancelled) return;
+      ocrStatusEl.textContent = 'Læser billede…';
       const worker = await getOcrWorker();
       if(ocrCancelled) return;
-      const { data: { text } } = await worker.recognize(file);
+      const { data: { text } } = await worker.recognize(ocrInput);
       if(ocrCancelled) return;
       ocrParsedRows = parseOcrText(text);
       renderOcrRows();
