@@ -791,6 +791,24 @@
   }
   @keyframes spin{ to{ transform: rotate(360deg); } }
   #ocrStatus{ font-size:0.85rem; color:var(--text-dim); }
+  #ocrSlowMsg{
+    display:none;
+    font-size: 0.78rem;
+    color: var(--copper-bright);
+    margin-top: 10px;
+    line-height:1.4;
+  }
+  #ocrSlowMsg.show{ display:block; }
+  #ocrCancelBtn{
+    margin-top: 18px;
+    width:100%;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
 
   .ocr-review-overlay{
     display:none;
@@ -902,7 +920,7 @@
     </svg>
     Scan billede (parti + kg)
   </button>
-  <input type="file" id="scanInput" accept="image/*" capture="environment" style="display:none">
+  <input type="file" id="scanInput" accept="image/*" style="display:none">
 
   <div class="grid" id="grid"></div>
 
@@ -1011,6 +1029,8 @@
   <div class="ocr-box">
     <div class="ocr-spinner"></div>
     <div id="ocrStatus">Læser billede...</div>
+    <div id="ocrSlowMsg">Det tager længere end normalt. Tjek din forbindelse — wifi er hurtigere end mobildata første gang.</div>
+    <button type="button" id="ocrCancelBtn">Annullér</button>
   </div>
 </div>
 
@@ -1458,11 +1478,22 @@
 
   // ---- OCR: scan billede med parti/kg ----
   let ocrWorkerPromise = null;
+  let ocrWorkerInstance = null;
   function getOcrWorker(){
     if(!ocrWorkerPromise){
-      ocrWorkerPromise = Tesseract.createWorker('eng');
+      ocrWorkerPromise = Tesseract.createWorker('eng').then(w => {
+        ocrWorkerInstance = w;
+        return w;
+      });
     }
     return ocrWorkerPromise;
+  }
+  async function terminateOcrWorker(){
+    try{
+      if(ocrWorkerInstance){ await ocrWorkerInstance.terminate(); }
+    }catch(e){}
+    ocrWorkerPromise = null;
+    ocrWorkerInstance = null;
   }
 
   function extractNumberTokens(line){
@@ -1506,29 +1537,58 @@
   const scanInput = document.getElementById('scanInput');
   const ocrOverlay = document.getElementById('ocrOverlay');
   const ocrStatusEl = document.getElementById('ocrStatus');
+  const ocrSlowMsgEl = document.getElementById('ocrSlowMsg');
+  const ocrCancelBtn = document.getElementById('ocrCancelBtn');
   const ocrReviewOverlay = document.getElementById('ocrReviewOverlay');
   const ocrRowsEl = document.getElementById('ocrRows');
   let ocrParsedRows = [];
+  let ocrCancelled = false;
+  let ocrSlowTimer = null;
 
   scanBtn.addEventListener('click', () => scanInput.click());
 
   scanInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if(!file) return;
+
+    ocrCancelled = false;
     ocrOverlay.classList.add('show');
     ocrStatusEl.textContent = 'Læser billede…';
+    ocrSlowMsgEl.classList.remove('show');
+    clearTimeout(ocrSlowTimer);
+    ocrSlowTimer = setTimeout(() => {
+      if(!ocrCancelled) ocrSlowMsgEl.classList.add('show');
+    }, 15000);
+
     try{
       const worker = await getOcrWorker();
+      if(ocrCancelled) return;
       const { data: { text } } = await worker.recognize(file);
+      if(ocrCancelled) return;
       ocrParsedRows = parseOcrText(text);
       renderOcrRows();
       ocrOverlay.classList.remove('show');
       ocrReviewOverlay.classList.add('show');
     }catch(err){
-      ocrOverlay.classList.remove('show');
-      alert('Kunne ikke læse billedet. Prøv igen med et tydeligere foto.');
+      if(!ocrCancelled){
+        ocrOverlay.classList.remove('show');
+        alert('Kunne ikke læse billedet. Prøv igen med et tydeligere foto.');
+      }
+    }finally{
+      clearTimeout(ocrSlowTimer);
+      ocrSlowMsgEl.classList.remove('show');
     }
     scanInput.value = '';
+  });
+
+  ocrCancelBtn.addEventListener('click', async () => {
+    ocrCancelled = true;
+    clearTimeout(ocrSlowTimer);
+    ocrOverlay.classList.remove('show');
+    ocrSlowMsgEl.classList.remove('show');
+    ocrStatusEl.textContent = 'Annullerer…';
+    await terminateOcrWorker();
+    ocrStatusEl.textContent = 'Læser billede…';
   });
 
   function renderOcrRows(){
