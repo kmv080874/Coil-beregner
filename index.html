@@ -1466,14 +1466,23 @@
   }
 
   function extractNumberTokens(line){
-    return line.match(/\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:[.,]\d+)?/g) || [];
+    return line.match(/\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?/g) || [];
   }
   function tokenToFloat(tok){
-    if(tok.includes('.') && tok.includes(',')){
+    const hasDot = tok.includes('.');
+    const hasComma = tok.includes(',');
+    if(hasDot && hasComma){
       return parseFloat(tok.replace(/\./g,'').replace(',', '.'));
     }
-    if(tok.includes(',')){
+    if(hasComma){
       return parseFloat(tok.replace(',', '.'));
+    }
+    if(hasDot){
+      // Dansk tal-format: punktum som tusind-adskiller, fx "1.010" = 1010
+      if(/^\d{1,3}(\.\d{3})+$/.test(tok)){
+        return parseFloat(tok.replace(/\./g, ''));
+      }
+      return parseFloat(tok);
     }
     return parseFloat(tok);
   }
@@ -1481,9 +1490,9 @@
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const rows = [];
     lines.forEach(line => {
-      const tokens = extractNumberTokens(line).filter(t => t.replace(/[.,]/g,'').length >= 2);
+      const tokens = extractNumberTokens(line);
       if(tokens.length >= 2){
-        const parti = tokens[0].replace(/[.,]/g, '');
+        const parti = tokens[0];
         const kgVal = tokenToFloat(tokens[tokens.length - 1]);
         if(!isNaN(kgVal) && kgVal > 0){
           rows.push({ parti, kg: kgVal });
