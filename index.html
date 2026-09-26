@@ -754,16 +754,26 @@
     50%{ box-shadow: 0 6px 22px var(--copper-soft); }
   }
   /* ---- Scan-knap og OCR ---- */
-  #scanBtn{
-    width:100%;
+  .scan-btn-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  #scanCameraBtn, #scanGalleryBtn{
     background: linear-gradient(145deg, var(--copper), #A85E33);
     color:#fff;
     font-weight:700;
+    font-size: 0.88rem;
     min-height: 48px;
-    margin-bottom: 12px;
-    display:flex; align-items:center; justify-content:center; gap:8px;
+    display:flex; align-items:center; justify-content:center; gap:7px;
   }
-  #scanBtn svg{ width:19px; height:19px; }
+  #scanCameraBtn svg, #scanGalleryBtn svg{ width:18px; height:18px; flex-shrink:0; }
+  #scanGalleryBtn{
+    background: var(--panel);
+    color: var(--copper-bright);
+    border: 1px solid var(--used-border);
+  }
 
   .ocr-overlay{
     display:none;
@@ -913,14 +923,25 @@
     </div>
   </div>
 
-  <button id="scanBtn" type="button">
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      <circle cx="12" cy="12" r="3.4" stroke="currentColor" stroke-width="1.8"/>
-    </svg>
-    Scan billede (parti + kg)
-  </button>
-  <input type="file" id="scanInput" accept="image/*" style="display:none">
+  <div class="scan-btn-row">
+    <button id="scanCameraBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="3.4" stroke="currentColor" stroke-width="1.8"/>
+      </svg>
+      Tag billede
+    </button>
+    <button id="scanGalleryBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3.5" y="4.5" width="17" height="15" rx="2" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="8.5" cy="9.5" r="1.6" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M4.5 16.5l4.5-4.5 3 3 4-4.5 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Fra galleri
+    </button>
+  </div>
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+  <input type="file" id="galleryInput" accept="image/*" style="display:none">
 
   <div class="grid" id="grid"></div>
 
@@ -1533,8 +1554,10 @@
     return rows.slice(0, 16);
   }
 
-  const scanBtn = document.getElementById('scanBtn');
-  const scanInput = document.getElementById('scanInput');
+  const scanCameraBtn = document.getElementById('scanCameraBtn');
+  const scanGalleryBtn = document.getElementById('scanGalleryBtn');
+  const cameraInput = document.getElementById('cameraInput');
+  const galleryInput = document.getElementById('galleryInput');
   const ocrOverlay = document.getElementById('ocrOverlay');
   const ocrStatusEl = document.getElementById('ocrStatus');
   const ocrSlowMsgEl = document.getElementById('ocrSlowMsg');
@@ -1571,10 +1594,10 @@
     });
   }
 
-  scanBtn.addEventListener('click', () => scanInput.click());
+  scanCameraBtn.addEventListener('click', () => cameraInput.click());
+  scanGalleryBtn.addEventListener('click', () => galleryInput.click());
 
-  scanInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
+  async function handleScanFile(file){
     if(!file) return;
 
     ocrCancelled = false;
@@ -1612,7 +1635,15 @@
       clearTimeout(ocrSlowTimer);
       ocrSlowMsgEl.classList.remove('show');
     }
-    scanInput.value = '';
+  }
+
+  cameraInput.addEventListener('change', (e) => {
+    handleScanFile(e.target.files[0]);
+    cameraInput.value = '';
+  });
+  galleryInput.addEventListener('change', (e) => {
+    handleScanFile(e.target.files[0]);
+    galleryInput.value = '';
   });
 
   ocrCancelBtn.addEventListener('click', async () => {
