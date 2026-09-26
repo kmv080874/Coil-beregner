@@ -1037,7 +1037,7 @@
 <div class="ocr-review-overlay" id="ocrReviewOverlay">
   <div class="ocr-review-panel">
     <h2>Gennemgå scannet data</h2>
-    <p class="ocr-review-hint">Tjek at parti-numre og kg er læst korrekt, og ret hvis nødvendigt, før de lægges ind.</p>
+    <p class="ocr-review-hint">Tjek at parti-numre og kg er læst korrekt, og ret hvis nødvendigt, før de lægges ind. Rækker med 0 kg eller under 200 kg tages automatisk ikke med.</p>
     <div id="ocrRows"></div>
     <button id="ocrAddRow" type="button">+ Tilføj række</button>
     <div class="ocr-review-actions">
@@ -1525,7 +1525,7 @@
       if(tokens.length >= 2){
         const parti = tokens[0];
         const kgVal = tokenToFloat(tokens[tokens.length - 1]);
-        if(!isNaN(kgVal) && kgVal > 0){
+        if(!isNaN(kgVal) && kgVal >= 200){
           rows.push({ parti, kg: kgVal });
         }
       }
@@ -1670,7 +1670,7 @@
     partiInputs.forEach((inp, i) => {
       const parti = inp.value.trim();
       const kgVal = parseNum(kgInputs[i].value);
-      if(!isNaN(kgVal) && kgVal > 0){
+      if(!isNaN(kgVal) && kgVal >= 200){
         finalRows.push({ parti, kg: kgVal });
       }
     });
